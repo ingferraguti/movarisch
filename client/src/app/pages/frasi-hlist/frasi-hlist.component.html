@@ -1,0 +1,97 @@
+<!-- TITLE -->
+<div class="mb-40 mt-40">
+    <h1>Lista FrasiH</h1>
+</div>
+
+<!-- SEARCH FORM -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title border-bottom border-italia">
+            <i class="fa fa-search"></i> Cerca
+        </h5>
+        
+        <form #searchForm="ngForm">
+            <div class="row mt-40 justify-content-md-center">
+                <div class="col-md-10">
+                    <div class="form-group">
+                        <label for="Codice">Codice</label>
+                        <input type="text" class="form-control" id="Codice" [(ngModel)]="search.Codice" name="Codice" #Codice="ngModel">
+                    </div>
+                    <div class="form-group">
+                        <label for="Descrizione">Descrizione</label>
+                        <input type="text" class="form-control" id="Descrizione" [(ngModel)]="search.Descrizione" name="Descrizione" #Descrizione="ngModel">
+                    </div>
+                    <div class="form-group">
+                        <label for="Punteggio">Punteggio</label>
+                        <input type="text" class="form-control" id="Punteggio" [(ngModel)]="search.Punteggio" name="Punteggio" #Punteggio="ngModel">
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLE -->
+<table class="table mt-40">
+    <thead>
+        <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Codice</th>
+            <th scope="col">Descrizione</th>
+            <th scope="col">Punteggio</th>
+            <th>Rimuovi</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let item of list | search: { 'Codice': search.Codice, 'Descrizione': search.Descrizione, 'Punteggio': search.Punteggio }">
+            <!-- ATTRIBUTES -->
+            <td>
+                <a [routerLink]="['/frasihs', item._id]">{{item._id}}</a>
+            </td>
+            <td>{{item.Codice }}</td>
+            <td>{{item.Descrizione }}</td>
+            <td>{{item.Punteggio }}</td>
+
+            <!-- DELETE BUTTON -->
+            <td>
+                <button class="btn btn-outline-primary btn-xs" data-toggle="modal" data-target="#deleteModal" (click)="selectId(item._id)">
+                    Rimuovi
+                </button>
+            </td>
+        </tr>
+    </tbody>
+    <div class="no-result" *ngIf="(list | search: {   'Codice': search.Codice ,  'Descrizione': search.Descrizione ,  'Punteggio': search.Punteggio  }).length == 0">
+        Nessun elemento trovato
+    </div>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">
+                    <i class="fa fa-times-circle"></i>&nbsp;&nbsp;Rimuovi</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Vuoi rimuovere questo elemento?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">NO</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" (click)="deleteItem()">SI</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BUTTON -->
+<button class="btn btn-primary text-center pull-right mb-20" routerLink="/frasihs/new">
+    <span>
+        <i class="fa fa-plus"></i>
+    </span>
+</button>
+
+<div class="clearfix"></div>
