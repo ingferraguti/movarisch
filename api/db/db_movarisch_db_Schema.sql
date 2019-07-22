@@ -28,6 +28,56 @@ CREATE TABLE IF NOT EXISTS `frasih` (
 
 
 --
+-- Struttura della tabella `miscelanonpericolosa`
+--
+
+CREATE TABLE IF NOT EXISTS `miscelanonpericolosa` (
+	`Nome` varchar(130)  NOT NULL,
+	`Score` decimal(6,2) ,
+	
+	-- RELAZIONI
+
+	`_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT 
+
+);
+
+
+
+
+-- relation m:m Sostanza Miscelanonpericolosa - Sostanza
+CREATE TABLE IF NOT EXISTS `Miscelanonpericolosa_Sostanza` (
+    `_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id_Miscelanonpericolosa` int(11)  NOT NULL REFERENCES Miscelanonpericolosa(_id),
+    `id_Sostanza` int(11)  NOT NULL REFERENCES Sostanza(_id)
+);
+
+
+--
+-- Struttura della tabella `processo`
+--
+
+CREATE TABLE IF NOT EXISTS `processo` (
+	`AltaEmissione` bool  NOT NULL,
+	`Nome` varchar(130)  NOT NULL,
+	
+	-- RELAZIONI
+
+	`_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT 
+
+);
+
+
+
+
+-- relation m:m Sostanza Processo - Sostanza
+CREATE TABLE IF NOT EXISTS `Processo_Sostanza` (
+    `_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id_Processo` int(11)  NOT NULL REFERENCES Processo(_id),
+    `id_Sostanza` int(11)  NOT NULL REFERENCES Sostanza(_id)
+);
+
+
+--
 -- Struttura della tabella `sostanza`
 --
 

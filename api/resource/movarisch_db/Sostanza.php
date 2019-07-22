@@ -28,6 +28,14 @@
 			type: Schema.ObjectId,
 			ref : "Sostanza"
 		}],
+		Sostanza: [{
+			type: Schema.ObjectId,
+			ref : "Miscelanonpericolosa"
+		}],
+		Sostanza: [{
+			type: Schema.ObjectId,
+			ref : "Processo"
+		}],
 		User: {
 			type: Schema.ObjectId,
 			ref : "Sostanza"
@@ -54,6 +62,8 @@ $app->post('/sostanza',	function () use ($app){
 		'Score'	=> isset($body->Score)?$body->Score:'',
 		'VLEP'	=> $body->VLEP,
 		
+
+
 
 		'User' => isset($body->User)?$body->User:'',
 	);
@@ -103,7 +113,7 @@ $app->post('/sostanza',	function () use ($app){
     	}
 	}
 	
-	    
+	            
 	
 	echo json_encode($body);
 	
@@ -197,6 +207,8 @@ $app->post('/sostanza/:id',	function ($id) use ($app){
 		'Nome'	    => $body->Nome,
 		'Score'	    => isset($body->Score)?$body->Score:'',
 		'VLEP'	    => $body->VLEP
+
+
 ,
 		'User'      => isset($body->User)?$body->User:'' 
 	);
@@ -245,7 +257,7 @@ $app->post('/sostanza/:id',	function ($id) use ($app){
     	}
 	}
 	
-	    
+	            
 	
 	echo json_encode($body);
     	
