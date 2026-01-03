@@ -1,0 +1,78 @@
+Riepilogo tabellare API (da api/ENDPOINTS.md)
+================================================
+
+Autenticazione e sicurezza
+--------------------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/login                         | POST   | Autentica utente e restituisce JWT
+/verifyToken                   | POST   | Verifica token JWT e restituisce payload
+
+Gestione utenti (admin) - path /Users
+-------------------------------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/Users/                        | POST   | Crea utente e associa ruoli
+/Users/:id                     | DELETE | Elimina utente e ruoli associati
+/Users/:id                     | GET    | Recupera utente con ruoli
+/Users/                        | GET    | Lista utenti con ruoli
+/Users/:id                     | POST   | Aggiorna anagrafica utente e ruoli
+
+Risorsa: FrasiH
+---------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/frasih                        | POST   | Crea FrasiH
+/frasih/:id                    | DELETE | Elimina FrasiH
+/frasih/:id                    | GET    | Recupera FrasiH per ID
+/frasih                        | GET    | Lista tutte le FrasiH
+/frasih/:id                    | POST   | Aggiorna FrasiH
+
+Risorsa: Sostanza
+-----------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/sostanza                      | POST   | Crea Sostanza e gestisce relazione con FrasiH
+/sostanza/:id                  | DELETE | Elimina Sostanza
+/sostanza/findByFrasiH/:key    | GET    | Filtra Sostanza per FrasiH
+/sostanza/findByUser/:key      | GET    | Filtra Sostanza per User
+/sostanza/findByVLEP/:key      | GET    | Filtra Sostanza per flag VLEP
+/sostanza/:id                  | GET    | Recupera Sostanza con array FrasiH
+/sostanza                      | GET    | Lista tutte le Sostanze
+/sostanza/:id                  | POST   | Aggiorna Sostanza e riallinea relazione FrasiH
+
+Risorsa: Miscelanonpericolosa
+-----------------------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/miscelanonpericolosa          | POST   | Crea miscelanonpericolosa e relazione Sostanza
+/miscelanonpericolosa/:id      | DELETE | Elimina miscelanonpericolosa
+/miscelanonpericolosa/findByNome/:key
+                              | GET    | Filtra per Nome
+/miscelanonpericolosa/findBySostanza/:key
+                              | GET    | Filtra per Sostanza
+/miscelanonpericolosa/:id      | GET    | Recupera miscelanonpericolosa con Sostanza
+/miscelanonpericolosa          | GET    | Lista tutte le miscelanonpericolosa
+/miscelanonpericolosa/:id      | POST   | Aggiorna e riallinea relazione con Sostanza
+
+Risorsa: Processo
+-----------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/processo                      | POST   | Crea processo e gestisce relazione con Sostanza
+/processo/:id                  | DELETE | Elimina processo
+/processo/findByNome/:key      | GET    | Filtra per Nome
+/processo/:id                  | GET    | Recupera processo con Sostanza
+/processo                      | GET    | Lista tutti i processi
+/processo/:id                  | POST   | Aggiorna e riallinea relazione con Sostanza
+
+Risorsa: User (base)
+-------------------
+Endpoint                       | Metodo | Azione
+------------------------------ | ------ | ---------------------------------------------
+/user                          | POST   | Crea utente base (senza ruoli)
+/user/:id                      | DELETE | Elimina utente base
+/user/:id                      | GET    | Recupera utente base
+/user                          | GET    | Lista utenti base
+/user/:id                      | POST   | Aggiorna utente base
+/user/:id/changePassword       | POST   | Stub servizio: ritorna "ok"
