@@ -27,7 +27,7 @@
 ## CONFIGURE
 --------------
 * For PHP and database config edit `/api/properties.php`
-* For AngularJS edit `properties.js`
+* The frontend lives in a separate project; point it to this API base URL.
 --------------
 ## USING SKAFFOLDER-CLI
 --------------
@@ -52,4 +52,3 @@ $ sk generate
 You can customize your generator template working with files in .skaffolder folder in your project root.
 
 Please refer to https://skaffolder.com/#/documentation/skaffolder-cli for more information.
-
