@@ -27,5 +27,4 @@
 ## CONFIGURE
 --------------
 * For PHP and database config edit `/api/properties.php`
-* The frontend lives in a separate project; point it to this API base URL.
 --------------
