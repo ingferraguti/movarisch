@@ -1,0 +1,811 @@
+openapi: 3.0.3
+info:
+  title: Movarisch API
+  version: 1.0.0
+  description: |
+    Specifica OpenAPI per le API backend PHP di Movarisch.
+    Gli endpoint sono registrati in `api/action.php`.
+servers:
+  - url: /api/action.php
+    description: Base path predefinito del backend
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorMessage:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+    AuthFailure:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - message
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+    LoginResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        mail:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        surname:
+          type: string
+          nullable: true
+        password:
+          type: string
+          nullable: true
+          description: Nel login viene restituita come null.
+        roles:
+          type: array
+          items:
+            type: string
+        token:
+          type: string
+      required:
+        - roles
+        - token
+    VerifyTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+    UserBase:
+      type: object
+      properties:
+        id:
+          type: integer
+        mail:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        surname:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        password:
+          type: string
+          nullable: true
+        roles:
+          type: string
+          nullable: true
+    UserWithRoles:
+      allOf:
+        - $ref: '#/components/schemas/UserBase'
+        - type: object
+          properties:
+            roles:
+              type: array
+              items:
+                type: string
+    UserAdminCreate:
+      type: object
+      properties:
+        mail:
+          type: string
+        name:
+          type: string
+        password:
+          type: string
+        surname:
+          type: string
+        username:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+      required:
+        - mail
+        - name
+        - password
+        - surname
+        - username
+        - roles
+    UserAdminUpdate:
+      type: object
+      properties:
+        mail:
+          type: string
+        name:
+          type: string
+        surname:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+      required:
+        - mail
+        - name
+        - surname
+        - roles
+    FrasiH:
+      type: object
+      properties:
+        id:
+          type: integer
+        Codice:
+          type: string
+        Descrizione:
+          type: string
+        Punteggio:
+          type: number
+          format: float
+      required:
+        - Codice
+        - Descrizione
+        - Punteggio
+    Sostanza:
+      type: object
+      properties:
+        id:
+          type: integer
+        Identificativo:
+          type: string
+        Nome:
+          type: string
+        Score:
+          type: number
+          format: float
+        VLEP:
+          type: boolean
+        User:
+          type: integer
+        FrasiH:
+          type: array
+          items:
+            type: integer
+      required:
+        - Identificativo
+        - Nome
+        - Score
+        - VLEP
+        - User
+        - FrasiH
+    Miscelanonpericolosa:
+      type: object
+      properties:
+        id:
+          type: integer
+        Nome:
+          type: string
+        Score:
+          type: number
+          format: float
+        Sostanza:
+          type: array
+          items:
+            type: integer
+      required:
+        - Nome
+        - Score
+        - Sostanza
+    Processo:
+      type: object
+      properties:
+        id:
+          type: integer
+        AltaEmissione:
+          type: boolean
+        Nome:
+          type: string
+        Sostanza:
+          type: array
+          items:
+            type: integer
+      required:
+        - AltaEmissione
+        - Nome
+        - Sostanza
+paths:
+  /login:
+    post:
+      summary: Autentica un utente e restituisce un JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Utente autenticato con token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenziali non valide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+  /verifyToken:
+    post:
+      summary: Verifica un token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTokenRequest'
+      responses:
+        '200':
+          description: Token valido
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          description: Token non valido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthFailure'
+        '403':
+          description: Token mancante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthFailure'
+  /Users/:
+    get:
+      summary: Lista utenti con ruoli
+      responses:
+        '200':
+          description: Lista utenti
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserWithRoles'
+    post:
+      summary: Crea un utente e associa ruoli
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAdminCreate'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAdminCreate'
+  /Users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera un utente con ruoli
+      responses:
+        '200':
+          description: Utente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithRoles'
+    post:
+      summary: Aggiorna anagrafica utente e ruoli
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAdminUpdate'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAdminUpdate'
+    delete:
+      summary: Elimina un utente e rimuove i ruoli associati
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /frasih:
+    get:
+      summary: Lista tutte le FrasiH
+      responses:
+        '200':
+          description: Lista FrasiH
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FrasiH'
+    post:
+      summary: Crea una FrasiH
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrasiH'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrasiH'
+  /frasih/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera una FrasiH per ID
+      responses:
+        '200':
+          description: FrasiH trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrasiH'
+    post:
+      summary: Aggiorna una FrasiH
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FrasiH'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FrasiH'
+    delete:
+      summary: Elimina una FrasiH
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /sostanza:
+    get:
+      summary: Lista tutte le Sostanze
+      responses:
+        '200':
+          description: Lista sostanze
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sostanza'
+    post:
+      summary: Crea una Sostanza e gestisce la relazione con FrasiH
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Sostanza'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sostanza'
+  /sostanza/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera una Sostanza e aggiunge l'array FrasiH dai join
+      responses:
+        '200':
+          description: Sostanza trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sostanza'
+    post:
+      summary: Aggiorna una Sostanza e riallinea la relazione con FrasiH
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Sostanza'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sostanza'
+    delete:
+      summary: Elimina una Sostanza
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /sostanza/findByFrasiH/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Filtra Sostanza per chiave FrasiH
+      responses:
+        '200':
+          description: Lista sostanze filtrate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sostanza'
+  /sostanza/findByUser/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Filtra Sostanza per User
+      responses:
+        '200':
+          description: Lista sostanze filtrate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sostanza'
+  /sostanza/findByVLEP/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: boolean
+    get:
+      summary: Filtra Sostanza per flag VLEP
+      responses:
+        '200':
+          description: Lista sostanze filtrate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sostanza'
+  /miscelanonpericolosa:
+    get:
+      summary: Lista tutte le miscele non pericolose
+      responses:
+        '200':
+          description: Lista miscele
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Miscelanonpericolosa'
+    post:
+      summary: Crea una miscelanonpericolosa e gestisce la relazione con Sostanza
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Miscelanonpericolosa'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Miscelanonpericolosa'
+  /miscelanonpericolosa/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera una miscelanonpericolosa e aggiunge Sostanza dai join
+      responses:
+        '200':
+          description: Miscela trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Miscelanonpericolosa'
+    post:
+      summary: Aggiorna e riallinea la relazione con Sostanza
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Miscelanonpericolosa'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Miscelanonpericolosa'
+    delete:
+      summary: Elimina una miscelanonpericolosa
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /miscelanonpericolosa/findByNome/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Filtra per Nome
+      responses:
+        '200':
+          description: Lista miscele filtrate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Miscelanonpericolosa'
+  /miscelanonpericolosa/findBySostanza/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Filtra per Sostanza
+      responses:
+        '200':
+          description: Lista miscele filtrate
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Miscelanonpericolosa'
+  /processo:
+    get:
+      summary: Lista tutti i processi
+      responses:
+        '200':
+          description: Lista processi
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Processo'
+    post:
+      summary: Crea un processo e gestisce la relazione con Sostanza
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Processo'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Processo'
+  /processo/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera un processo e aggiunge Sostanza dai join
+      responses:
+        '200':
+          description: Processo trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Processo'
+    post:
+      summary: Aggiorna e riallinea la relazione con Sostanza
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Processo'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Processo'
+    delete:
+      summary: Elimina un processo
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /processo/findByNome/{key}:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Filtra per Nome
+      responses:
+        '200':
+          description: Lista processi filtrati
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Processo'
+  /user:
+    get:
+      summary: Lista utenti base
+      responses:
+        '200':
+          description: Lista utenti base
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserBase'
+    post:
+      summary: Crea un utente base
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBase'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBase'
+  /user/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Recupera un utente base
+      responses:
+        '200':
+          description: Utente trovato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBase'
+    post:
+      summary: Aggiorna un utente base
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBase'
+      responses:
+        '200':
+          description: Echo del body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBase'
+    delete:
+      summary: Elimina un utente base
+      responses:
+        '200':
+          description: Esito eliminazione
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /user/{id}/changePassword:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      summary: Stub cambio password (ritorna ok)
+      responses:
+        '200':
+          description: Risposta di servizio
+          content:
+            application/json:
+              schema:
+                type: string
+                example: ok
