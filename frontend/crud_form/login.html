@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: #0f172a;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .login-card {
+        width: min(420px, 100%);
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .login-card h1 {
+        font-size: 28px;
+        color: #0f172a;
+      }
+
+      .login-card p {
+        color: #475569;
+        font-size: 15px;
+        line-height: 1.5;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 14px;
+        color: #1e293b;
+      }
+
+      input {
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #cbd5f5;
+        background: #f8fafc;
+        font-size: 15px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        background: #ffffff;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .actions button {
+        border: none;
+        background: #6366f1;
+        color: #ffffff;
+        padding: 12px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+      }
+
+      .actions button:hover {
+        background: #4f46e5;
+      }
+
+      .links {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+      }
+
+      .links a {
+        color: #6366f1;
+        text-decoration: none;
+      }
+
+      .links a:hover {
+        text-decoration: underline;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #94a3b8;
+        font-size: 13px;
+      }
+
+      .divider::before,
+      .divider::after {
+        content: "";
+        height: 1px;
+        flex: 1;
+        background: #e2e8f0;
+      }
+
+      .social {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      .social button {
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: border 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .social button:hover {
+        border-color: #cbd5f5;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="login-card">
+      <header>
+        <h1>Accedi al tuo account</h1>
+        <p>Inserisci le tue credenziali per continuare.</p>
+      </header>
+
+      <form>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="nome@azienda.it"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Inserisci la password"
+            required
+          />
+        </div>
+
+        <div class="actions">
+          <button type="submit">Accedi</button>
+          <div class="links">
+            <a href="#">Password dimenticata?</a>
+            <a href="#">Crea un account</a>
+          </div>
+        </div>
+      </form>
+
+      <div class="divider">oppure</div>
+
+      <div class="social">
+        <button type="button">Continua con Google</button>
+        <button type="button">Continua con Microsoft</button>
+      </div>
+    </main>
+  </body>
+</html>
