@@ -23,6 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+
+// PHP 8+: polyfill per Slim 2 (get_magic_quotes_gpc rimossa)
+if (!function_exists('get_magic_quotes_gpc')) {
+    function get_magic_quotes_gpc() { return false; }
+}
+
+
 //dependency import
 require 'properties.php';
 require 'lib/Slim/Slim.php';
