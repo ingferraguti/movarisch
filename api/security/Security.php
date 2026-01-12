@@ -6,57 +6,37 @@ require_once 'lib/Slim/Middleware.php';
  */
 class Security extends \Slim\Middleware
 {
-    public function call()
-    {
-    	$app = $this->app;
+   public function call()
+{
+    $app = $this->app;
 
-		$response = $app->response();
-		$response->header('Access-Control-Allow-Origin', '*');
-    	$response->header('Access-Control-Allow-Headers', 'Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, pass, user');
-    	$response->header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATH');
-		$response->header('Access-Control-Allow-Credentials', 'true');
-		$response->header('Access-Control-Allow-Origin-param', '*');
-
-		if($app->request()->getMethod() == 'OPTIONS')
-			return;
-		
-    	$app->response->headers->set('Content-Type', 'application/json');
-
-		/*
-
-    	//Get headers variable of HTTP request
-    	$params= array(
-    			'user' => $app->environment['HTTP_USER'],
-    			'pass' => $app->environment['HTTP_PASS'],
-    	);
-
-    	//seach user in DB
-    	$query = "select * FROM user WHERE user=:user AND pass=:pass LIMIT 1";
-    	$userLogged = makeQuery( $query, $params, false);
-    	
-    	if (isset($userLogged->_id))
-    	{
-			//User logged
-    		if (isset($userLogged->_id))
-    		{
-    			//set user for use in services
-    			$app->response()->userLogged = $userLogged;
-    		}
-    		$this->next->call();
-    	}
-    	else
-    	{
-    		//user not logged
-    		$response = array ('error' => '401 Unauthorized');
-    		if ( $app->request()->getResourceUri() == "/Login")
-    			$response['disableError'] = true;
-    		
-    		echo json_encode($response);
-    		$app->response()->status(401);
-    	}
-
-		*/
-
+    // CORS (allineato al frontend in dev)
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
+    if ($origin === 'http://localhost:3000') {
+        $app->response->headers->set('Access-Control-Allow-Origin', $origin);
+        $app->response->headers->set('Vary', 'Origin');
+        // Abilita solo se usi cookie/sessions dal browser:
+        // $app->response->headers->set('Access-Control-Allow-Credentials', 'true');
+    } else {
+        $app->response->headers->set('Access-Control-Allow-Origin', $origin);
+        $app->response->headers->set('Vary', 'Origin');
     }
+
+    $app->response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    $app->response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+
+    // Preflight: lascia passare subito
+    if ($app->request()->getMethod() === 'OPTIONS') {
+        $app->response->setStatus(204);
+        return;
+    }
+
+    // Content type default
+    $app->response->headers->set('Content-Type', 'application/json');
+
+    // IMPORTANTISSIMO: se non chiami next, blocchi tutte le route
+    $this->next->call();
+}
+
 }
 ?>
