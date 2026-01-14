@@ -21,3 +21,6 @@ node_modules/
 # Temporary files
 *.tmp
 *.swp
+
+# Local deploy scripts
+scripts/deploy_dev_apache_matteo.sh
