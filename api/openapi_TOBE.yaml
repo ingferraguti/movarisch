@@ -1,0 +1,1150 @@
+openapi: 3.0.3
+info:
+  title: Movarisch API (TO-BE)
+  version: 2.2.0
+  description: >
+    Contratto TO-BE per sviluppo parallelo frontend/backend.
+
+    Regole chiave:
+      - Multi-tenant per owner implicito dal JWT (me).
+      - Tutte le risorse di dominio sono "owned" (owner implicito) eccetto FrasiH (globale).
+      - RBAC:
+          * ADMIN: CRUD utenti standard + CRUD FrasiH.
+          * USER: gestione del proprio profilo + CRUD sulle proprie risorse + read/list FrasiH.
+      - Separazione CALCOLO vs CRUD:
+          * CRUD salva solo input/metadata.
+          * Gli esiti di calcolo si ottengono esclusivamente da endpoint /calcoli/* (stateless, non persistenti).
+      - Unità di misura:
+          * tempo = minuti, distanza = metri, quantità = kg
+
+servers:
+  - url: /api
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Admin
+  - name: FrasiH
+  - name: Aziende
+  - name: Aree
+  - name: Lavoratori
+  - name: AgentiChimici
+  - name: Valutazioni
+  - name: Calcoli
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    AziendaIdPath:
+      name: aziendaId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    AreaIdPath:
+      name: areaId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    LavoratoreIdPath:
+      name: lavoratoreId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        code: { type: string, example: VALIDATION_ERROR }
+        message: { type: string, example: Campo obbligatorio mancante }
+        details:
+          type: object
+          additionalProperties: true
+      required: [code, message]
+      additionalProperties: false
+
+    # =========================
+    # AUTH / USERS
+    # =========================
+    LoginRequest:
+      type: object
+      properties:
+        username: { type: string, example: mario.rossi }
+        password: { type: string, example: "********" }
+      required: [username, password]
+      additionalProperties: false
+
+    UserRole:
+      type: string
+      enum: [ADMIN, USER]
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        mail: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        surname: { type: string, nullable: true }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/UserRole" }
+        isActive: { type: boolean, default: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, username, roles, isActive, createdAt, updatedAt]
+      additionalProperties: false
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, example: 3600 }
+        user: { $ref: "#/components/schemas/User" }
+      required: [accessToken, tokenType, expiresIn, user]
+      additionalProperties: false
+
+    UserAdminCreate:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string, minLength: 8 }
+        mail: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        surname: { type: string, nullable: true }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/UserRole" }
+        isActive: { type: boolean, default: true }
+      required: [username, password, roles]
+      additionalProperties: false
+
+    UserAdminUpdate:
+      type: object
+      properties:
+        mail: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        surname: { type: string, nullable: true }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/UserRole" }
+        isActive: { type: boolean }
+      additionalProperties: false
+
+    UserSelfUpdate:
+      type: object
+      properties:
+        mail: { type: string, nullable: true }
+        name: { type: string, nullable: true }
+        surname: { type: string, nullable: true }
+      additionalProperties: false
+
+    ChangePasswordRequest:
+      type: object
+      properties:
+        oldPassword: { type: string }
+        newPassword: { type: string, minLength: 8 }
+      required: [oldPassword, newPassword]
+      additionalProperties: false
+
+    # =========================
+    # FRASI H (GLOBAL)
+    # =========================
+    FrasiH:
+      type: object
+      properties:
+        id: { type: integer }
+        codice: { type: string, example: H314 }
+        descrizione: { type: string }
+        punteggio: { type: number, format: float, example: 4.5 }
+      required: [id, codice, descrizione, punteggio]
+      additionalProperties: false
+
+    FrasiHCreate:
+      type: object
+      properties:
+        codice: { type: string }
+        descrizione: { type: string }
+        punteggio: { type: number, format: float }
+      required: [codice, descrizione, punteggio]
+      additionalProperties: false
+
+    FrasiHUpdate:
+      type: object
+      properties:
+        descrizione: { type: string }
+        punteggio: { type: number, format: float }
+      additionalProperties: false
+
+    # =========================
+    # OWNED DOMAIN (CRUD)
+    # =========================
+    AuditFields:
+      type: object
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [createdAt, updatedAt]
+      additionalProperties: false
+
+    Azienda:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            nome: { type: string }
+            note: { type: string, nullable: true }
+          required: [id, nome]
+          additionalProperties: false
+        - $ref: "#/components/schemas/AuditFields"
+
+    AziendaCreate:
+      type: object
+      properties:
+        nome: { type: string }
+        note: { type: string, nullable: true }
+      required: [nome]
+      additionalProperties: false
+
+    AziendaUpdate:
+      type: object
+      properties:
+        nome: { type: string }
+        note: { type: string, nullable: true }
+      additionalProperties: false
+
+    Area:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            aziendaId: { type: integer }
+            nome: { type: string }
+            note: { type: string, nullable: true }
+          required: [id, aziendaId, nome]
+          additionalProperties: false
+        - $ref: "#/components/schemas/AuditFields"
+
+    AreaCreate:
+      type: object
+      properties:
+        nome: { type: string }
+        note: { type: string, nullable: true }
+      required: [nome]
+      additionalProperties: false
+
+    AreaUpdate:
+      type: object
+      properties:
+        nome: { type: string }
+        note: { type: string, nullable: true }
+      additionalProperties: false
+
+    Lavoratore:
+      allOf:
+        - type: object
+          properties:
+            id: { type: integer }
+            areaId: { type: integer }
+            codice: { type: string }
+            mansione: { type: string, nullable: true }
+            note: { type: string, nullable: true }
+          required: [id, areaId, codice]
+          additionalProperties: false
+        - $ref: "#/components/schemas/AuditFields"
+
+    LavoratoreCreate:
+      type: object
+      properties:
+        codice: { type: string }
+        mansione: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+      required: [codice]
+      additionalProperties: false
+
+    LavoratoreUpdate:
+      type: object
+      properties:
+        codice: { type: string }
+        mansione: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+      additionalProperties: false
+
+    # =========================
+    # AGENTE CHIMICO (owned)
+    # =========================
+    AgenteChimicoTipo:
+      type: string
+      enum: [sostanza, miscelaP, miscelaNP, processo]
+
+    AgenteChimicoBase:
+      type: object
+      properties:
+        id: { type: integer }
+        nome: { type: string }
+        identificativo: { type: string }
+        vlep: { type: boolean }
+        alta_emissione: { type: boolean }
+        tipo: { $ref: "#/components/schemas/AgenteChimicoTipo" }
+        frasiHIds:
+          type: array
+          items: { type: integer }
+      required: [id, nome, identificativo, vlep, alta_emissione, tipo]
+      additionalProperties: false
+
+    AgenteChimicoSostanza:
+      allOf:
+        - $ref: "#/components/schemas/AgenteChimicoBase"
+        - type: object
+          properties:
+            tipo: { type: string, enum: [sostanza] }
+          additionalProperties: false
+
+    AgenteChimicoComposto:
+      allOf:
+        - $ref: "#/components/schemas/AgenteChimicoBase"
+        - type: object
+          properties:
+            tipo: { type: string, enum: [miscelaP, miscelaNP, processo] }
+            sostanzeComponentiIds:
+              type: array
+              items: { type: integer }
+          required: [sostanzeComponentiIds]
+          additionalProperties: false
+
+    AgenteChimico:
+      oneOf:
+        - $ref: "#/components/schemas/AgenteChimicoSostanza"
+        - $ref: "#/components/schemas/AgenteChimicoComposto"
+      discriminator:
+        propertyName: tipo
+
+    AgenteChimicoCreateBase:
+      type: object
+      properties:
+        nome: { type: string }
+        identificativo: { type: string }
+        vlep: { type: boolean }
+        alta_emissione: { type: boolean }
+        tipo: { $ref: "#/components/schemas/AgenteChimicoTipo" }
+        frasiHIds:
+          type: array
+          items: { type: integer }
+      required: [nome, identificativo, vlep, alta_emissione, tipo]
+      additionalProperties: false
+
+    AgenteChimicoCreateSostanza:
+      allOf:
+        - $ref: "#/components/schemas/AgenteChimicoCreateBase"
+        - type: object
+          properties:
+            tipo: { type: string, enum: [sostanza] }
+          additionalProperties: false
+
+    AgenteChimicoCreateComposto:
+      allOf:
+        - $ref: "#/components/schemas/AgenteChimicoCreateBase"
+        - type: object
+          properties:
+            tipo: { type: string, enum: [miscelaP, miscelaNP, processo] }
+            sostanzeComponentiIds:
+              type: array
+              items: { type: integer }
+          required: [sostanzeComponentiIds]
+          additionalProperties: false
+
+    AgenteChimicoCreate:
+      oneOf:
+        - $ref: "#/components/schemas/AgenteChimicoCreateSostanza"
+        - $ref: "#/components/schemas/AgenteChimicoCreateComposto"
+      discriminator:
+        propertyName: tipo
+
+    AgenteChimicoUpdateSostanza:
+      type: object
+      properties:
+        nome: { type: string }
+        identificativo: { type: string }
+        vlep: { type: boolean }
+        alta_emissione: { type: boolean }
+        frasiHIds:
+          type: array
+          items: { type: integer }
+      additionalProperties: false
+
+    AgenteChimicoUpdateComposto:
+      type: object
+      properties:
+        nome: { type: string }
+        identificativo: { type: string }
+        vlep: { type: boolean }
+        alta_emissione: { type: boolean }
+        frasiHIds:
+          type: array
+          items: { type: integer }
+        sostanzeComponentiIds:
+          type: array
+          items: { type: integer }
+      additionalProperties: false
+
+    # =========================
+    # VALUTAZIONE (CRUD: input+metadata ONLY)
+    # =========================
+    Valutazione:
+      type: object
+      properties:
+        id: { type: integer }
+        lavoratoreId: { type: integer }
+        agenteChimicoId: { type: integer }
+        nome: { type: string }
+        data: { type: string, format: date-time }
+
+        einal: { type: number, format: float, nullable: true }
+        statoFisicoInal: { type: integer, nullable: true }
+        quantitaKg: { type: number, format: float, nullable: true }
+        tipoUsoInal: { type: integer, nullable: true }
+        tipoControlloInal: { type: integer, nullable: true }
+        tempoInalMin: { type: integer, nullable: true }
+        distanzaM: { type: number, format: float, nullable: true }
+
+        ecute: { type: number, format: float, nullable: true }
+        esposizioneCutanea: { type: boolean, nullable: true }
+        livelliContattoCutaneo: { type: integer, nullable: true }
+
+        tipoControlloProc: { type: integer, nullable: true }
+        quantitaProcKg: { type: number, format: float, nullable: true }
+        tempoProcMin: { type: integer, nullable: true }
+
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, lavoratoreId, agenteChimicoId, nome, data, createdAt, updatedAt]
+      additionalProperties: false
+
+    ValutazioneCreate:
+      type: object
+      properties:
+        agenteChimicoId: { type: integer }
+        nome: { type: string }
+        data: { type: string, format: date-time }
+
+        einal: { type: number, format: float, nullable: true }
+        statoFisicoInal: { type: integer, nullable: true }
+        quantitaKg: { type: number, format: float, nullable: true }
+        tipoUsoInal: { type: integer, nullable: true }
+        tipoControlloInal: { type: integer, nullable: true }
+        tempoInalMin: { type: integer, nullable: true }
+        distanzaM: { type: number, format: float, nullable: true }
+
+        ecute: { type: number, format: float, nullable: true }
+        esposizioneCutanea: { type: boolean, nullable: true }
+        livelliContattoCutaneo: { type: integer, nullable: true }
+
+        tipoControlloProc: { type: integer, nullable: true }
+        quantitaProcKg: { type: number, format: float, nullable: true }
+        tempoProcMin: { type: integer, nullable: true }
+      required: [agenteChimicoId, nome, data]
+      additionalProperties: false
+
+    ValutazioneUpdate:
+      type: object
+      properties:
+        agenteChimicoId: { type: integer }
+        nome: { type: string }
+        data: { type: string, format: date-time }
+
+        einal: { type: number, format: float, nullable: true }
+        statoFisicoInal: { type: integer, nullable: true }
+        quantitaKg: { type: number, format: float, nullable: true }
+        tipoUsoInal: { type: integer, nullable: true }
+        tipoControlloInal: { type: integer, nullable: true }
+        tempoInalMin: { type: integer, nullable: true }
+        distanzaM: { type: number, format: float, nullable: true }
+
+        ecute: { type: number, format: float, nullable: true }
+        esposizioneCutanea: { type: boolean, nullable: true }
+        livelliContattoCutaneo: { type: integer, nullable: true }
+
+        tipoControlloProc: { type: integer, nullable: true }
+        quantitaProcKg: { type: number, format: float, nullable: true }
+        tempoProcMin: { type: integer, nullable: true }
+      additionalProperties: false
+
+    # =========================
+    # CALCOLI (stateless)
+    # =========================
+    CalcoloValutazioneRequest:
+      type: object
+      properties:
+        lavoratoreId: { type: integer }
+        agenteChimicoId: { type: integer }
+        metodoVersione: { type: string, example: "1.0" }
+
+        einal: { type: number, format: float, nullable: true }
+        statoFisicoInal: { type: integer, nullable: true }
+        quantitaKg: { type: number, format: float, nullable: true }
+        tipoUsoInal: { type: integer, nullable: true }
+        tipoControlloInal: { type: integer, nullable: true }
+        tempoInalMin: { type: integer, nullable: true }
+        distanzaM: { type: number, format: float, nullable: true }
+
+        ecute: { type: number, format: float, nullable: true }
+        esposizioneCutanea: { type: boolean, nullable: true }
+        livelliContattoCutaneo: { type: integer, nullable: true }
+
+        tipoControlloProc: { type: integer, nullable: true }
+        quantitaProcKg: { type: number, format: float, nullable: true }
+        tempoProcMin: { type: integer, nullable: true }
+      required: [lavoratoreId, agenteChimicoId, metodoVersione]
+      additionalProperties: false
+
+    CalcoloValutazioneResponse:
+      type: object
+      properties:
+        metodoVersione: { type: string }
+        rInal: { type: number, format: float, nullable: true }
+        rCute: { type: number, format: float, nullable: true }
+        rischioCumulativo: { type: number, format: float, nullable: true }
+        warnings:
+          type: array
+          items: { type: string }
+      required: [metodoVersione, rInal, rCute, rischioCumulativo]
+      additionalProperties: false
+
+paths:
+  # AUTH
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (JWT)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/me:
+    get:
+      tags: [Auth, Users]
+      summary: Ritorna l'utente autenticato
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # USER SELF
+  /users/me:
+    patch:
+      tags: [Users]
+      summary: Aggiorna SOLO il proprio profilo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserSelfUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/me/change-password:
+    post:
+      tags: [Users]
+      summary: Cambio password del proprio utente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
+      responses:
+        "204": { description: Password cambiata }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ADMIN USERS
+  /admin/users:
+    get:
+      tags: [Admin, Users]
+      summary: Lista utenti (solo ADMIN)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/User" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Users]
+      summary: Crea utente (solo ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserAdminCreate" }
+      responses:
+        "201":
+          description: Creato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/users/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Users]
+      summary: Dettaglio utente (solo ADMIN)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Users]
+      summary: Aggiorna utente (solo ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserAdminUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Users]
+      summary: Elimina utente (solo ADMIN)
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # FRASI H (GLOBAL)
+  /frasih:
+    get:
+      tags: [FrasiH]
+      summary: Lista FrasiH (USER e ADMIN)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/FrasiH" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /frasih/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [FrasiH]
+      summary: Dettaglio FraseH
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrasiH" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/frasih:
+    post:
+      tags: [Admin, FrasiH]
+      summary: Crea FraseH (solo ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FrasiHCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrasiH" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/frasih/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    patch:
+      tags: [Admin, FrasiH]
+      summary: Aggiorna FraseH (solo ADMIN)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FrasiHUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FrasiH" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, FrasiH]
+      summary: Elimina FraseH (solo ADMIN)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # AZIENDE (owned)
+  /aziende:
+    get:
+      tags: [Aziende]
+      summary: Lista aziende (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Azienda" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Aziende]
+      summary: Crea azienda (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AziendaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Azienda" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /aziende/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Aziende]
+      summary: Dettaglio azienda (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Azienda" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Aziende]
+      summary: Aggiorna azienda (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AziendaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Azienda" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Aziende]
+      summary: Elimina azienda (owned)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # AREE (owned, nested sotto azienda)
+  /aziende/{aziendaId}/aree:
+    parameters: [{ $ref: "#/components/parameters/AziendaIdPath" }]
+    get:
+      tags: [Aree, Aziende]
+      summary: Lista aree per azienda (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Area" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Aree, Aziende]
+      summary: Crea area sotto azienda (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AreaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Area" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /aree/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Aree]
+      summary: Dettaglio area (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Area" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Aree]
+      summary: Aggiorna area (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AreaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Area" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Aree]
+      summary: Elimina area (owned)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # LAVORATORI (owned, nested sotto area)
+  /aree/{areaId}/lavoratori:
+    parameters: [{ $ref: "#/components/parameters/AreaIdPath" }]
+    get:
+      tags: [Lavoratori, Aree]
+      summary: Lista lavoratori per area (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Lavoratore" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Lavoratori, Aree]
+      summary: Crea lavoratore sotto area (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LavoratoreCreate" }
+      responses:
+        "201":
+          description: Creato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lavoratore" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /lavoratori/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Lavoratori]
+      summary: Dettaglio lavoratore (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lavoratore" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Lavoratori]
+      summary: Aggiorna lavoratore (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LavoratoreUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lavoratore" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Lavoratori]
+      summary: Elimina lavoratore (owned)
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # AGENTI CHIMICI (owned)
+  /agenti-chimici:
+    get:
+      tags: [AgentiChimici]
+      summary: Lista agenti chimici (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AgenteChimico" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [AgentiChimici]
+      summary: Crea agente chimico (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgenteChimicoCreate" }
+      responses:
+        "201":
+          description: Creato
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgenteChimico" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /agenti-chimici/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [AgentiChimici]
+      summary: Dettaglio agente chimico (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgenteChimico" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [AgentiChimici]
+      summary: Aggiorna agente chimico (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/AgenteChimicoUpdateSostanza"
+                - $ref: "#/components/schemas/AgenteChimicoUpdateComposto"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgenteChimico" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [AgentiChimici]
+      summary: Elimina agente chimico (owned)
+      responses:
+        "204": { description: Eliminato }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # VALUTAZIONI (owned, nested sotto lavoratore)
+  /lavoratori/{lavoratoreId}/valutazioni:
+    parameters: [{ $ref: "#/components/parameters/LavoratoreIdPath" }]
+    get:
+      tags: [Valutazioni, Lavoratori]
+      summary: Lista valutazioni di un lavoratore (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Valutazione" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Valutazioni, Lavoratori]
+      summary: Crea valutazione per lavoratore (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ValutazioneCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Valutazione" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /valutazioni/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Valutazioni]
+      summary: Dettaglio valutazione (owned)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Valutazione" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Valutazioni]
+      summary: Aggiorna valutazione (owned)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ValutazioneUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Valutazione" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Valutazioni]
+      summary: Elimina valutazione (owned)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # CALCOLI (separati dal CRUD, stateless)
+  /calcoli/valutazioni:
+    post:
+      tags: [Calcoli, Valutazioni]
+      summary: Calcolo valutazione (stateless, non salva)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CalcoloValutazioneRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalcoloValutazioneResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /calcoli/valutazioni/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    post:
+      tags: [Calcoli, Valutazioni]
+      summary: Calcolo valutazione salvata (stateless, non salva esiti)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metodoVersione: { type: string, example: "1.0" }
+              required: [metodoVersione]
+              additionalProperties: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalcoloValutazioneResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
