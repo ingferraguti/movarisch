@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `miscelanonpericolosa` (
 	`Score` decimal(6,2) ,
 	
 	-- RELAZIONI
+	`Sostanza` int(11)  REFERENCES sostanza(_id),
 
 	`_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT 
 
@@ -47,8 +48,8 @@ CREATE TABLE IF NOT EXISTS `miscelanonpericolosa` (
 -- relation m:m Sostanza Miscelanonpericolosa - Sostanza
 CREATE TABLE IF NOT EXISTS `Miscelanonpericolosa_Sostanza` (
     `_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `id_Miscelanonpericolosa` int(11)  NOT NULL REFERENCES Miscelanonpericolosa(_id),
-    `id_Sostanza` int(11)  NOT NULL REFERENCES Sostanza(_id)
+    `id_Miscelanonpericolosa` int(11)  NOT NULL REFERENCES miscelanonpericolosa(_id),
+    `id_Sostanza` int(11)  NOT NULL REFERENCES sostanza(_id)
 );
 
 
@@ -72,8 +73,8 @@ CREATE TABLE IF NOT EXISTS `processo` (
 -- relation m:m Sostanza Processo - Sostanza
 CREATE TABLE IF NOT EXISTS `Processo_Sostanza` (
     `_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `id_Processo` int(11)  NOT NULL REFERENCES Processo(_id),
-    `id_Sostanza` int(11)  NOT NULL REFERENCES Sostanza(_id)
+    `id_Processo` int(11)  NOT NULL REFERENCES processo(_id),
+    `id_Sostanza` int(11)  NOT NULL REFERENCES sostanza(_id)
 );
 
 
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS `sostanza` (
 	
 	-- RELAZIONI
 	`User` int(11)  REFERENCES user(_id),
+	`FrasiH` int(11)  REFERENCES frasih(_id),
 
 	`_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT 
 
@@ -100,8 +102,8 @@ CREATE TABLE IF NOT EXISTS `sostanza` (
 -- relation m:m FrasiH Sostanza - FrasiH
 CREATE TABLE IF NOT EXISTS `Sostanza_FrasiH` (
     `_id` int(11) NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `id_Sostanza` int(11)  NOT NULL REFERENCES Sostanza(_id),
-    `id_FrasiH` int(11)  NOT NULL REFERENCES FrasiH(_id)
+    `id_Sostanza` int(11)  NOT NULL REFERENCES sostanza(_id),
+    `id_FrasiH` int(11)  NOT NULL REFERENCES frasih(_id)
 );
 
 
@@ -138,7 +140,6 @@ CREATE TABLE IF NOT EXISTS `roles` (
 
 );
 INSERT INTO `movarisch_db`.`roles` (`role`, `_user`, `_id`) VALUES ('ADMIN', '1', 1);
-
 
 
 
