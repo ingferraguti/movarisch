@@ -295,41 +295,6 @@ components:
         - VLEP
         - User
         - FrasiH
-    Miscelanonpericolosa:
-      type: object
-      properties:
-        id:
-          type: integer
-        Nome:
-          type: string
-        Score:
-          type: number
-          format: float
-        Sostanza:
-          type: array
-          items:
-            type: integer
-      required:
-        - Nome
-        - Score
-        - Sostanza
-    Processo:
-      type: object
-      properties:
-        id:
-          type: integer
-        AltaEmissione:
-          type: boolean
-        Nome:
-          type: string
-        Sostanza:
-          type: array
-          items:
-            type: integer
-      required:
-        - AltaEmissione
-        - Nome
-        - Sostanza
     AgenteChimicoTipo:
       type: string
       enum:
@@ -491,6 +456,96 @@ components:
           type: array
           items:
             type: integer
+      additionalProperties: false
+    CalcoloValutazioneRequest:
+      type: object
+      properties:
+        lavoratoreId:
+          type: integer
+        agenteChimicoId:
+          type: integer
+        metodoVersione:
+          type: string
+        einal:
+          type: number
+          format: float
+          nullable: true
+        statoFisicoInal:
+          type: integer
+          nullable: true
+        quantitaKg:
+          type: number
+          format: float
+          nullable: true
+        tipoUsoInal:
+          type: integer
+          nullable: true
+        tipoControlloInal:
+          type: integer
+          nullable: true
+        tempoInalMin:
+          type: integer
+          nullable: true
+        distanzaM:
+          type: number
+          format: float
+          nullable: true
+        ecute:
+          type: number
+          format: float
+          nullable: true
+        esposizioneCutanea:
+          type: boolean
+          nullable: true
+        livelliContattoCutaneo:
+          type: integer
+          nullable: true
+        tipoControlloProc:
+          type: integer
+          nullable: true
+        quantitaProcKg:
+          type: number
+          format: float
+          nullable: true
+        tempoProcMin:
+          type: integer
+          nullable: true
+      required:
+        - lavoratoreId
+        - agenteChimicoId
+        - metodoVersione
+      additionalProperties: false
+    CalcoloValutazioneByIdRequest:
+      type: object
+      properties:
+        metodoVersione:
+          type: string
+      required:
+        - metodoVersione
+      additionalProperties: false
+    CalcoloValutazioneResponse:
+      type: object
+      properties:
+        metodoVersione:
+          type: string
+        rInal:
+          type: number
+          format: float
+        rCute:
+          type: number
+          format: float
+        rischioCumulativo:
+          type: number
+          format: float
+        warnings:
+          type: array
+          items:
+            type: string
+      required:
+        - metodoVersione
+        - rInal
+        - rCute
+        - rischioCumulativo
       additionalProperties: false
 paths:
   /login:
@@ -1065,194 +1120,84 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Sostanza'
-  /miscelanonpericolosa:
-    get:
-      summary: Lista tutte le miscele non pericolose
-      responses:
-        '200':
-          description: Lista miscele
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Miscelanonpericolosa'
+  /calcoli/valutazioni:
     post:
-      summary: Crea una miscelanonpericolosa e gestisce la relazione con Sostanza
+      summary: Calcolo valutazione (stateless)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Miscelanonpericolosa'
+              $ref: '#/components/schemas/CalcoloValutazioneRequest'
       responses:
         '200':
-          description: Echo del body
+          description: Esito calcolo
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Miscelanonpericolosa'
-  /miscelanonpericolosa/{id}:
+                $ref: '#/components/schemas/CalcoloValutazioneResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /calcoli/valutazioni/{id}:
     parameters:
       - name: id
         in: path
         required: true
         schema:
           type: integer
-    get:
-      summary: Recupera una miscelanonpericolosa e aggiunge Sostanza dai join
-      responses:
-        '200':
-          description: Miscela trovata
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Miscelanonpericolosa'
     post:
-      summary: Aggiorna e riallinea la relazione con Sostanza
+      summary: Calcolo valutazione salvata (stateless)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Miscelanonpericolosa'
+              $ref: '#/components/schemas/CalcoloValutazioneByIdRequest'
       responses:
         '200':
-          description: Echo del body
+          description: Esito calcolo
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Miscelanonpericolosa'
-    delete:
-      summary: Elimina una miscelanonpericolosa
-      responses:
-        '200':
-          description: Esito eliminazione
+                $ref: '#/components/schemas/CalcoloValutazioneResponse'
+        '400':
+          description: Validation error
           content:
             application/json:
               schema:
-                type: boolean
-  /miscelanonpericolosa/findByNome/{key}:
-    parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
-    get:
-      summary: Filtra per Nome
-      responses:
-        '200':
-          description: Lista miscele filtrate
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Miscelanonpericolosa'
-  /miscelanonpericolosa/findBySostanza/{key}:
-    parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: integer
-    get:
-      summary: Filtra per Sostanza
-      responses:
-        '200':
-          description: Lista miscele filtrate
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Not found
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Miscelanonpericolosa'
-  /processo:
-    get:
-      summary: Lista tutti i processi
-      responses:
-        '200':
-          description: Lista processi
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Processo'
-    post:
-      summary: Crea un processo e gestisce la relazione con Sostanza
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Processo'
-      responses:
-        '200':
-          description: Echo del body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Processo'
-  /processo/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-    get:
-      summary: Recupera un processo e aggiunge Sostanza dai join
-      responses:
-        '200':
-          description: Processo trovato
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Processo'
-    post:
-      summary: Aggiorna e riallinea la relazione con Sostanza
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Processo'
-      responses:
-        '200':
-          description: Echo del body
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Processo'
-    delete:
-      summary: Elimina un processo
-      responses:
-        '200':
-          description: Esito eliminazione
-          content:
-            application/json:
-              schema:
-                type: boolean
-  /processo/findByNome/{key}:
-    parameters:
-      - name: key
-        in: path
-        required: true
-        schema:
-          type: string
-    get:
-      summary: Filtra per Nome
-      responses:
-        '200':
-          description: Lista processi filtrati
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Processo'
+                $ref: '#/components/schemas/ApiError'
   /agenti-chimici:
     get:
       summary: Lista agenti chimici

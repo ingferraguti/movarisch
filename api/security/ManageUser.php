@@ -1,5 +1,53 @@
 <?php
 require_once './db/dbmovarisch_dbManager.php';
+
+function validateNoAdditionalProperties($payload, $allowedKeys) {
+	if (!is_object($payload)) {
+		return array('payload' => 'not_object');
+	}
+	$extra = array();
+	foreach (array_keys(get_object_vars($payload)) as $key) {
+		if (!in_array($key, $allowedKeys, true)) {
+			$extra[] = $key;
+		}
+	}
+	if (count($extra) > 0) {
+		return $extra;
+	}
+	return null;
+}
+
+function normalizeEmailValue($value) {
+	if ($value === null) {
+		return null;
+	}
+	$mail = trim((string)$value);
+	if ($mail === '') {
+		return null;
+	}
+	return strtolower($mail);
+}
+
+function isPasswordHashValue($value) {
+	if (!is_string($value)) {
+		return false;
+	}
+	return preg_match('/^(\\$2[ayb]\\$|\\$argon2)/', $value) === 1;
+}
+
+function verifyPasswordValue($plain, $stored) {
+	if (isPasswordHashValue($stored)) {
+		return password_verify($plain, $stored);
+	}
+	return hash_equals((string)$stored, (string)$plain);
+}
+
+function hashPasswordValue($plain, $stored) {
+	if (isPasswordHashValue($stored)) {
+		return password_hash($plain, PASSWORD_DEFAULT);
+	}
+	return $plain;
+}
 	
 /*
  * SCHEMA DB User
@@ -277,11 +325,46 @@ $app->patch('/users/me',	function () use ($app){
 	}
 
 	$body = json_decode($app->request()->getBody());
+	if ($body == null) {
+		respondApiError($app, 400, 'VALIDATION_ERROR', 'Payload non valido');
+		return;
+	}
+	$allowed = array('mail', 'name', 'surname');
+	$extra = validateNoAdditionalProperties($body, $allowed);
+	if ($extra !== null) {
+		respondApiError($app, 400, 'VALIDATION_ERROR', 'Proprieta non consentita', array('extra' => $extra));
+		return;
+	}
+
+	$existing = makeQuery("SELECT * FROM user WHERE _id = :id LIMIT 1", array('id' => $userId), false);
+	if ($existing == null) {
+		respondApiError($app, 404, 'NOT_FOUND', 'Not found');
+		return;
+	}
+
+	$mail = isset($body->mail) ? normalizeEmailValue($body->mail) : (isset($existing->mail) ? $existing->mail : null);
+	if (isset($body->mail) && $mail !== null && !filter_var($mail, FILTER_VALIDATE_EMAIL)) {
+		respondApiError($app, 400, 'VALIDATION_ERROR', 'Email non valida');
+		return;
+	}
+
+	if ($mail !== null) {
+		$check = makeQuery(
+			"SELECT _id FROM user WHERE mail = :mail AND _id <> :id LIMIT 1",
+			array('mail' => $mail, 'id' => $userId),
+			false
+		);
+		if ($check != null) {
+			respondApiError($app, 409, 'CONFLICT', 'Email gia in uso');
+			return;
+		}
+	}
+
 	$params = array(
 		'id'	=> $userId,
-		'mail'	    => isset($body->mail)?$body->mail:'',
-		'name'	    => isset($body->name)?$body->name:'',
-		'surname'	    => isset($body->surname)?$body->surname:'',
+		'mail'	    => $mail,
+		'name'	    => isset($body->name)?$body->name:$existing->name,
+		'surname'	    => isset($body->surname)?$body->surname:$existing->surname,
 	);
 
 	makeQuery("UPDATE user SET  mail = :mail,  name = :name,  surname = :surname WHERE _id = :id LIMIT 1", $params, false);
@@ -306,6 +389,16 @@ $app->post('/users/me/change-password',	function () use ($app){
 	}
 
 	$body = json_decode($app->request()->getBody());
+	if ($body == null) {
+		respondApiError($app, 400, 'VALIDATION_ERROR', 'Payload non valido');
+		return;
+	}
+	$allowed = array('oldPassword', 'newPassword');
+	$extra = validateNoAdditionalProperties($body, $allowed);
+	if ($extra !== null) {
+		respondApiError($app, 400, 'VALIDATION_ERROR', 'Proprieta non consentita', array('extra' => $extra));
+		return;
+	}
 	if ($body == null || !isset($body->oldPassword) || !isset($body->newPassword)) {
 		respondApiError($app, 400, 'VALIDATION_ERROR', 'Campo obbligatorio mancante');
 		return;
@@ -317,17 +410,16 @@ $app->post('/users/me/change-password',	function () use ($app){
 
 	$params = array(
 		'id'	=> $userId,
-		'old_password'	=> $body->oldPassword,
 	);
-	$check = makeQuery("SELECT * FROM user WHERE _id = :id AND password = :old_password LIMIT 1", $params, false);
-	if ($check == null) {
+	$user = makeQuery("SELECT * FROM user WHERE _id = :id LIMIT 1", $params, false);
+	if ($user == null || !isset($user->password) || !verifyPasswordValue($body->oldPassword, $user->password)) {
 		respondApiError($app, 400, 'VALIDATION_ERROR', 'Password non valida');
 		return;
 	}
 
 	$params = array(
 		'id'	=> $userId,
-		'password'	=> $body->newPassword,
+		'password'	=> hashPasswordValue($body->newPassword, $user->password),
 	);
 	makeQuery("UPDATE user SET password = :password WHERE _id = :id LIMIT 1", $params, false);
 
