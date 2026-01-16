@@ -32,8 +32,11 @@ CREATE TABLE IF NOT EXISTS `frasih` (
 --
 
 CREATE TABLE IF NOT EXISTS `miscelanonpericolosa` (
+	`Identificativo` varchar(130) ,
 	`Nome` varchar(130)  NOT NULL,
 	`Score` decimal(6,2) ,
+	`VLEP` bool ,
+	`AltaEmissione` bool ,
 	
 	-- RELAZIONI
 	`Sostanza` int(11)  REFERENCES sostanza(_id),
@@ -59,7 +62,9 @@ CREATE TABLE IF NOT EXISTS `Miscelanonpericolosa_Sostanza` (
 
 CREATE TABLE IF NOT EXISTS `processo` (
 	`AltaEmissione` bool  NOT NULL,
+	`Identificativo` varchar(130) ,
 	`Nome` varchar(130)  NOT NULL,
+	`VLEP` bool ,
 	
 	-- RELAZIONI
 
@@ -140,7 +145,6 @@ CREATE TABLE IF NOT EXISTS `roles` (
 
 );
 INSERT INTO `movarisch_db`.`roles` (`role`, `_user`, `_id`) VALUES ('ADMIN', '1', 1);
-
 
 
 

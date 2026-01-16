@@ -330,6 +330,168 @@ components:
         - AltaEmissione
         - Nome
         - Sostanza
+    AgenteChimicoTipo:
+      type: string
+      enum:
+        - sostanza
+        - miscelaP
+        - miscelaNP
+        - processo
+    AgenteChimicoBase:
+      type: object
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        identificativo:
+          type: string
+        vlep:
+          type: boolean
+        alta_emissione:
+          type: boolean
+        tipo:
+          $ref: '#/components/schemas/AgenteChimicoTipo'
+        frasiHIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - id
+        - nome
+        - identificativo
+        - vlep
+        - alta_emissione
+        - tipo
+      additionalProperties: false
+    AgenteChimicoSostanza:
+      allOf:
+        - $ref: '#/components/schemas/AgenteChimicoBase'
+        - type: object
+          properties:
+            tipo:
+              type: string
+              enum:
+                - sostanza
+          additionalProperties: false
+    AgenteChimicoComposto:
+      allOf:
+        - $ref: '#/components/schemas/AgenteChimicoBase'
+        - type: object
+          properties:
+            tipo:
+              type: string
+              enum:
+                - miscelaP
+                - miscelaNP
+                - processo
+            sostanzeComponentiIds:
+              type: array
+              items:
+                type: integer
+          required:
+            - sostanzeComponentiIds
+          additionalProperties: false
+    AgenteChimico:
+      oneOf:
+        - $ref: '#/components/schemas/AgenteChimicoSostanza'
+        - $ref: '#/components/schemas/AgenteChimicoComposto'
+      discriminator:
+        propertyName: tipo
+    AgenteChimicoCreateBase:
+      type: object
+      properties:
+        nome:
+          type: string
+        identificativo:
+          type: string
+        vlep:
+          type: boolean
+        alta_emissione:
+          type: boolean
+        tipo:
+          $ref: '#/components/schemas/AgenteChimicoTipo'
+        frasiHIds:
+          type: array
+          items:
+            type: integer
+      required:
+        - nome
+        - identificativo
+        - vlep
+        - alta_emissione
+        - tipo
+      additionalProperties: false
+    AgenteChimicoCreateSostanza:
+      allOf:
+        - $ref: '#/components/schemas/AgenteChimicoCreateBase'
+        - type: object
+          properties:
+            tipo:
+              type: string
+              enum:
+                - sostanza
+          additionalProperties: false
+    AgenteChimicoCreateComposto:
+      allOf:
+        - $ref: '#/components/schemas/AgenteChimicoCreateBase'
+        - type: object
+          properties:
+            tipo:
+              type: string
+              enum:
+                - miscelaP
+                - miscelaNP
+                - processo
+            sostanzeComponentiIds:
+              type: array
+              items:
+                type: integer
+          required:
+            - sostanzeComponentiIds
+          additionalProperties: false
+    AgenteChimicoCreate:
+      oneOf:
+        - $ref: '#/components/schemas/AgenteChimicoCreateSostanza'
+        - $ref: '#/components/schemas/AgenteChimicoCreateComposto'
+      discriminator:
+        propertyName: tipo
+    AgenteChimicoUpdateSostanza:
+      type: object
+      properties:
+        nome:
+          type: string
+        identificativo:
+          type: string
+        vlep:
+          type: boolean
+        alta_emissione:
+          type: boolean
+        frasiHIds:
+          type: array
+          items:
+            type: integer
+      additionalProperties: false
+    AgenteChimicoUpdateComposto:
+      type: object
+      properties:
+        nome:
+          type: string
+        identificativo:
+          type: string
+        vlep:
+          type: boolean
+        alta_emissione:
+          type: boolean
+        frasiHIds:
+          type: array
+          items:
+            type: integer
+        sostanzeComponentiIds:
+          type: array
+          items:
+            type: integer
+      additionalProperties: false
 paths:
   /login:
     post:
@@ -1091,6 +1253,141 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Processo'
+  /agenti-chimici:
+    get:
+      summary: Lista agenti chimici
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista agenti chimici
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgenteChimico'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      summary: Crea agente chimico
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgenteChimicoCreate'
+      responses:
+        '201':
+          description: Creato
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgenteChimico'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /agenti-chimici/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      summary: Dettaglio agente chimico
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgenteChimico'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    patch:
+      summary: Aggiorna agente chimico
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AgenteChimicoUpdateSostanza'
+                - $ref: '#/components/schemas/AgenteChimicoUpdateComposto'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgenteChimico'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      summary: Elimina agente chimico
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Eliminato
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /user:
     get:
       summary: Lista utenti base

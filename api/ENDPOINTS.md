@@ -28,6 +28,24 @@ Questo documento descrive le funzioni (endpoint HTTP) del backend PHP presenti i
 - **Output (200)**: oggetto utente con `roles` (array) e `token` JWT. La password viene impostata a `null`.
 - **Output (401)**: `{ "message": "Not Authorized" }`.
 
+### `POST /auth/login`
+**Descrizione**: autentica un utente e restituisce il token nel formato TO-BE.
+- **Input (body)**:
+  ```json
+  {
+    "username": "...",
+    "password": "..."
+  }
+  ```
+- **Output (200)**: oggetto con `accessToken`, `tokenType`, `expiresIn`, `user`.
+- **Output (401)**: `{ "code": "UNAUTHORIZED", "message": "Not Authorized" }`.
+
+### `GET /auth/me`
+**Descrizione**: ritorna l'utente autenticato.
+- **Header**: `Authorization: Bearer <token>`.
+- **Output (200)**: oggetto utente in formato TO-BE.
+- **Output (401)**: `{ "code": "UNAUTHORIZED", "message": "Not Authorized" }`.
+
 ### `POST /verifyToken`
 **Descrizione**: verifica un token JWT.
 - **Input (body)**:
@@ -83,6 +101,60 @@ Le rotte di gestione utenti usano il path **`/Users`** (nota la maiuscola) e ges
   }
   ```
 - **Output**: echo del body (JSON).
+
+### Gestione utenti (admin, TO-BE)
+Le rotte TO-BE usano `/admin/users` e richiedono `Authorization: Bearer <token>` con ruolo `ADMIN`.
+
+#### `GET /admin/users`
+**Descrizione**: lista utenti (solo ADMIN).
+- **Output**: lista di utenti in formato TO-BE.
+
+#### `POST /admin/users`
+**Descrizione**: crea un utente (solo ADMIN).
+- **Input (body)**:
+  ```json
+  {
+    "username": "...",
+    "password": "...",
+    "roles": ["ADMIN", "USER"],
+    "mail": "...",
+    "name": "...",
+    "surname": "..."
+  }
+  ```
+- **Output (201)**: utente creato in formato TO-BE.
+
+#### `GET /admin/users/:id`
+**Descrizione**: dettaglio utente (solo ADMIN).
+- **Output**: utente in formato TO-BE.
+
+#### `PATCH /admin/users/:id`
+**Descrizione**: aggiorna utente (solo ADMIN).
+- **Input (body)**: campi opzionali `mail`, `name`, `surname`, `roles`.
+- **Output (200)**: utente aggiornato in formato TO-BE.
+
+#### `DELETE /admin/users/:id`
+**Descrizione**: elimina utente (solo ADMIN).
+- **Output (204)**: nessun contenuto.
+
+### Profilo utente (TO-BE)
+#### `PATCH /users/me`
+**Descrizione**: aggiorna solo il proprio profilo.
+- **Header**: `Authorization: Bearer <token>`.
+- **Input (body)**:
+  ```json
+  { "mail": "...", "name": "...", "surname": "..." }
+  ```
+- **Output (200)**: utente aggiornato in formato TO-BE.
+
+#### `POST /users/me/change-password`
+**Descrizione**: cambio password del proprio utente.
+- **Header**: `Authorization: Bearer <token>`.
+- **Input (body)**:
+  ```json
+  { "oldPassword": "...", "newPassword": "..." }
+  ```
+- **Output (204)**: password cambiata.
 
 ## Risorsa: FrasiH
 File: `api/resource/movarisch_db/FrasiH.php`
@@ -229,6 +301,31 @@ File: `api/resource/movarisch_db/Processo.php`
 **Descrizione**: aggiorna e riallinea la relazione con `Sostanza`.
 - **Input**: come per la creazione.
 - **Output**: echo del body (JSON).
+
+## Agenti chimici (TO-BE)
+File: `api/resource/movarisch_db/custom/AgentiChimiciCustom.php`
+
+### `GET /agenti-chimici`
+**Descrizione**: lista agenti chimici (sostanze, miscele, processi).
+- **Output**: lista di oggetti AgenteChimico (TO-BE).
+
+### `POST /agenti-chimici`
+**Descrizione**: crea un agente chimico (owned).
+- **Input (body)**: in base al tipo (`sostanza`, `miscelaP`, `miscelaNP`, `processo`).
+- **Output (201)**: agente chimico creato.
+
+### `GET /agenti-chimici/:id`
+**Descrizione**: dettaglio agente chimico.
+- **Output (200)**: oggetto AgenteChimico.
+
+### `PATCH /agenti-chimici/:id`
+**Descrizione**: aggiorna agente chimico.
+- **Input (body)**: campi opzionali in base al tipo.
+- **Output (200)**: agente chimico aggiornato.
+
+### `DELETE /agenti-chimici/:id`
+**Descrizione**: elimina agente chimico.
+- **Output (204)**: nessun contenuto.
 
 ## Risorsa: User
 File: `api/resource/movarisch_db/User.php`
