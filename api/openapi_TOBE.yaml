@@ -1,16 +1,16 @@
 openapi: 3.0.3
 info:
   title: Movarisch API (TO-BE)
-  version: 2.2.0
+  version: 2.3.0
   description: >
     Contratto TO-BE per sviluppo parallelo frontend/backend.
 
     Regole chiave:
       - Multi-tenant per owner implicito dal JWT (me).
-      - Tutte le risorse di dominio sono "owned" (owner implicito) eccetto FrasiH (globale).
+      - Tutte le risorse di dominio sono "owned" (owner implicito) eccetto FrasiH (globale) e Codifiche (globali).
       - RBAC:
-          * ADMIN: CRUD utenti standard + CRUD FrasiH.
-          * USER: gestione del proprio profilo + CRUD sulle proprie risorse + read/list FrasiH.
+          * ADMIN: CRUD utenti standard + CRUD FrasiH + CRUD Codifiche.
+          * USER: gestione del proprio profilo + CRUD sulle proprie risorse + read/list FrasiH + read/list Codifiche.
       - Separazione CALCOLO vs CRUD:
           * CRUD salva solo input/metadata.
           * Gli esiti di calcolo si ottengono esclusivamente da endpoint /calcoli/* (stateless, non persistenti).
@@ -25,6 +25,7 @@ tags:
   - name: Users
   - name: Admin
   - name: FrasiH
+  - name: Codifiche
   - name: Aziende
   - name: Aree
   - name: Lavoratori
@@ -210,6 +211,60 @@ components:
       properties:
         descrizione: { type: string }
         punteggio: { type: number, format: float }
+      additionalProperties: false
+
+    # =========================
+    # CODIFICHE (GLOBAL)
+    # =========================
+    CodificaTipo:
+      type: string
+      enum:
+        - stato-fisico-inal
+        - tipo-uso-inal
+        - tipo-controllo-inal
+        - livelli-contatto-cutaneo
+        - tipo-controllo-proc
+
+    Codifica:
+      type: object
+      properties:
+        id: { type: integer }
+        tipo: { $ref: "#/components/schemas/CodificaTipo" }
+        codice:
+          type: string
+          description: "Codice breve (es: 1, A, B, SOLIDO, ecc.)"
+        descrizione:
+          type: string
+          description: "Descrizione estesa"
+        ordine:
+          type: integer
+          nullable: true
+          description: "Ordinamento suggerito (UI)"
+        isActive:
+          type: boolean
+          default: true
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, tipo, codice, descrizione, isActive, createdAt, updatedAt]
+      additionalProperties: false
+
+    CodificaCreate:
+      type: object
+      properties:
+        codice: { type: string }
+        descrizione: { type: string }
+        ordine: { type: integer, nullable: true }
+        isActive: { type: boolean, default: true }
+      required: [codice, descrizione]
+      additionalProperties: false
+
+    CodificaUpdate:
+      type: object
+      properties:
+        codice: { type: string }
+        descrizione: { type: string }
+        ordine: { type: integer, nullable: true }
+        isActive: { type: boolean }
       additionalProperties: false
 
     # =========================
@@ -436,20 +491,20 @@ components:
         data: { type: string, format: date-time }
 
         einal: { type: number, format: float, nullable: true }
-        statoFisicoInal: { type: integer, nullable: true }
-        quantitaKg: { type: number, format: float, nullable: true }
-        tipoUsoInal: { type: integer, nullable: true }
-        tipoControlloInal: { type: integer, nullable: true }
-        tempoInalMin: { type: integer, nullable: true }
-        distanzaM: { type: number, format: float, nullable: true }
+        statoFisicoInal: { type: integer, nullable: true, description: "FK Codifica tipo=stato-fisico-inal" }
+        quantitaKg: { type: number, format: float, nullable: true, description: "kg" }
+        tipoUsoInal: { type: integer, nullable: true, description: "FK Codifica tipo=tipo-uso-inal" }
+        tipoControlloInal: { type: integer, nullable: true, description: "FK Codifica tipo=tipo-controllo-inal" }
+        tempoInalMin: { type: integer, nullable: true, description: "minuti" }
+        distanzaM: { type: number, format: float, nullable: true, description: "metri" }
 
         ecute: { type: number, format: float, nullable: true }
         esposizioneCutanea: { type: boolean, nullable: true }
-        livelliContattoCutaneo: { type: integer, nullable: true }
+        livelliContattoCutaneo: { type: integer, nullable: true, description: "FK Codifica tipo=livelli-contatto-cutaneo" }
 
-        tipoControlloProc: { type: integer, nullable: true }
-        quantitaProcKg: { type: number, format: float, nullable: true }
-        tempoProcMin: { type: integer, nullable: true }
+        tipoControlloProc: { type: integer, nullable: true, description: "FK Codifica tipo=tipo-controllo-proc" }
+        quantitaProcKg: { type: number, format: float, nullable: true, description: "kg" }
+        tempoProcMin: { type: integer, nullable: true, description: "minuti" }
 
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -547,7 +602,9 @@ components:
       additionalProperties: false
 
 paths:
+  # =========================
   # AUTH
+  # =========================
   /auth/login:
     post:
       tags: [Auth]
@@ -578,7 +635,9 @@ paths:
               schema: { $ref: "#/components/schemas/User" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  # =========================
   # USER SELF
+  # =========================
   /users/me:
     patch:
       tags: [Users]
@@ -610,7 +669,9 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
-  # ADMIN USERS
+  # =========================
+  # ADMIN USERS (CRUD)
+  # =========================
   /admin/users:
     get:
       tags: [Admin, Users]
@@ -682,7 +743,9 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # FRASI H (GLOBAL)
+  # =========================
   /frasih:
     get:
       tags: [FrasiH]
@@ -757,7 +820,500 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
+  # CODIFICHE (GLOBAL) - READ ALL USERS
+  # =========================
+  /codifiche/stato-fisico-inal:
+    get:
+      tags: [Codifiche]
+      summary: Lista codifiche Stato fisico inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /codifiche/stato-fisico-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Codifiche]
+      summary: Dettaglio codifica Stato fisico inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /codifiche/tipo-uso-inal:
+    get:
+      tags: [Codifiche]
+      summary: Lista codifiche Tipo uso inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /codifiche/tipo-uso-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Codifiche]
+      summary: Dettaglio codifica Tipo uso inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /codifiche/tipo-controllo-inal:
+    get:
+      tags: [Codifiche]
+      summary: Lista codifiche Tipo controllo inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /codifiche/tipo-controllo-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Codifiche]
+      summary: Dettaglio codifica Tipo controllo inalazione
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /codifiche/livelli-contatto-cutaneo:
+    get:
+      tags: [Codifiche]
+      summary: Lista codifiche Livelli contatto cutaneo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /codifiche/livelli-contatto-cutaneo/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Codifiche]
+      summary: Dettaglio codifica Livelli contatto cutaneo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /codifiche/tipo-controllo-proc:
+    get:
+      tags: [Codifiche]
+      summary: Lista codifiche Tipo controllo processo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /codifiche/tipo-controllo-proc/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Codifiche]
+      summary: Dettaglio codifica Tipo controllo processo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # =========================
+  # CODIFICHE (GLOBAL) - ADMIN CRUD
+  # =========================
+  /admin/codifiche/stato-fisico-inal:
+    get:
+      tags: [Admin, Codifiche]
+      summary: Lista codifiche Stato fisico inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Codifiche]
+      summary: Crea codifica Stato fisico inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/codifiche/stato-fisico-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Codifiche]
+      summary: Dettaglio codifica Stato fisico inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Codifiche]
+      summary: Aggiorna codifica Stato fisico inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Codifiche]
+      summary: Elimina codifica Stato fisico inalazione (admin)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/codifiche/tipo-uso-inal:
+    get:
+      tags: [Admin, Codifiche]
+      summary: Lista codifiche Tipo uso inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Codifiche]
+      summary: Crea codifica Tipo uso inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/codifiche/tipo-uso-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Codifiche]
+      summary: Dettaglio codifica Tipo uso inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Codifiche]
+      summary: Aggiorna codifica Tipo uso inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Codifiche]
+      summary: Elimina codifica Tipo uso inalazione (admin)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/codifiche/tipo-controllo-inal:
+    get:
+      tags: [Admin, Codifiche]
+      summary: Lista codifiche Tipo controllo inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Codifiche]
+      summary: Crea codifica Tipo controllo inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/codifiche/tipo-controllo-inal/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Codifiche]
+      summary: Dettaglio codifica Tipo controllo inalazione (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Codifiche]
+      summary: Aggiorna codifica Tipo controllo inalazione (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Codifiche]
+      summary: Elimina codifica Tipo controllo inalazione (admin)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/codifiche/livelli-contatto-cutaneo:
+    get:
+      tags: [Admin, Codifiche]
+      summary: Lista codifiche Livelli contatto cutaneo (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Codifiche]
+      summary: Crea codifica Livelli contatto cutaneo (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/codifiche/livelli-contatto-cutaneo/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Codifiche]
+      summary: Dettaglio codifica Livelli contatto cutaneo (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Codifiche]
+      summary: Aggiorna codifica Livelli contatto cutaneo (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Codifiche]
+      summary: Elimina codifica Livelli contatto cutaneo (admin)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/codifiche/tipo-controllo-proc:
+    get:
+      tags: [Admin, Codifiche]
+      summary: Lista codifiche Tipo controllo processo (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Codifica" } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Admin, Codifiche]
+      summary: Crea codifica Tipo controllo processo (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaCreate" }
+      responses:
+        "201":
+          description: Creata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /admin/codifiche/tipo-controllo-proc/{id}:
+    parameters: [{ $ref: "#/components/parameters/IdPath" }]
+    get:
+      tags: [Admin, Codifiche]
+      summary: Dettaglio codifica Tipo controllo processo (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Admin, Codifiche]
+      summary: Aggiorna codifica Tipo controllo processo (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodificaUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Codifica" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Admin, Codifiche]
+      summary: Elimina codifica Tipo controllo processo (admin)
+      responses:
+        "204": { description: Eliminata }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # =========================
   # AZIENDE (owned)
+  # =========================
   /aziende:
     get:
       tags: [Aziende]
@@ -824,7 +1380,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # AREE (owned, nested sotto azienda)
+  # =========================
   /aziende/{aziendaId}/aree:
     parameters: [{ $ref: "#/components/parameters/AziendaIdPath" }]
     get:
@@ -894,7 +1452,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # LAVORATORI (owned, nested sotto area)
+  # =========================
   /aree/{areaId}/lavoratori:
     parameters: [{ $ref: "#/components/parameters/AreaIdPath" }]
     get:
@@ -964,7 +1524,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # AGENTI CHIMICI (owned)
+  # =========================
   /agenti-chimici:
     get:
       tags: [AgentiChimici]
@@ -1034,7 +1596,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # VALUTAZIONI (owned, nested sotto lavoratore)
+  # =========================
   /lavoratori/{lavoratoreId}/valutazioni:
     parameters: [{ $ref: "#/components/parameters/LavoratoreIdPath" }]
     get:
@@ -1104,7 +1668,9 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  # =========================
   # CALCOLI (separati dal CRUD, stateless)
+  # =========================
   /calcoli/valutazioni:
     post:
       tags: [Calcoli, Valutazioni]
