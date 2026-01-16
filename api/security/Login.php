@@ -54,9 +54,13 @@ function getAuthenticatedUserFromRequest() {
 	return decodeJwtToken($token);
 }
 
-function respondApiError($app, $status, $code, $message) {
+function respondApiError($app, $status, $code, $message, $details = null) {
 	$app->response()->status($status);
-	echo json_encode(array('code' => $code, 'message' => $message));
+	$payload = array('code' => $code, 'message' => $message);
+	if ($details !== null) {
+		$payload['details'] = $details;
+	}
+	echo json_encode($payload);
 }
 
 function ensureAuthenticatedUser($app) {

@@ -1,0 +1,378 @@
+# AS-IS vs TO-BE OpenAPI Diff Task Plan
+
+## Executive summary
+- Endpoints: added 60, removed 37, changed 16
+- Schemas changed: 3
+- Key architectural changes: Admin endpoints introduced under /admin, Calcoli endpoints added as separate stateless APIs, Self-service user endpoints under /users/me
+
+## Detailed diff by entity
+
+### Auth
+- Endpoints to ADD:
+  - None
+- Endpoints to CHANGE:
+  - POST /auth/login (responses)
+  - GET /auth/me (security, responses)
+- Endpoints to REMOVE:
+  - POST /login
+- Schema changes:
+  - Removed schemas: AuthFailure, LoginResponse, VerifyTokenRequest
+- Auth/RBAC impact:
+  - Security requirements changed on one or more endpoints
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - AuthFailure: drop table or mapping
+  - LoginResponse: drop table or mapping
+  - VerifyTokenRequest: drop table or mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - Removed endpoints: consider temporary aliases or versioned endpoints
+- Task checklist:
+  - Update handlers for changed request/response/security
+  - Remove or deprecate removed endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Users (Admin + Self)
+- Endpoints to ADD:
+  - None
+- Endpoints to CHANGE:
+  - GET /admin/users (security, responses)
+  - POST /admin/users (security, responses)
+  - DELETE /admin/users/{id} (security, responses)
+  - GET /admin/users/{id} (security, responses)
+  - PATCH /admin/users/{id} (security, responses)
+  - PATCH /users/me (security, responses)
+  - POST /users/me/change-password (security, responses)
+- Endpoints to REMOVE:
+  - GET /Users/
+  - POST /Users/
+  - DELETE /Users/{id}
+  - GET /Users/{id}
+  - POST /Users/{id}
+- Schema changes:
+  - Removed schemas: UserBase, UserWithRoles
+  - UserAdminCreate: added: isActive; changed: roles
+  - UserAdminUpdate: added: isActive; changed: roles
+- Auth/RBAC impact:
+  - Admin-only routes present under /admin
+  - Security requirements changed on one or more endpoints
+  - Ensure ADMIN manages /admin/users and USER limited to /users/me
+- Validation rules to implement:
+  - UserAdminCreate: update validations for required/enum/type changes
+  - UserAdminUpdate: update validations for required/enum/type changes
+- Database changes/migrations:
+  - UserAdminCreate: adjust columns for isActive, roles
+  - UserAdminUpdate: adjust columns for isActive, roles
+  - UserBase: drop table or mapping
+  - UserWithRoles: drop table or mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - Removed endpoints: consider temporary aliases or versioned endpoints
+- Task checklist:
+  - Update handlers for changed request/response/security
+  - Remove or deprecate removed endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### FrasiH (global)
+- Endpoints to ADD:
+  - POST /admin/frasih
+  - DELETE /admin/frasih/{id}
+  - PATCH /admin/frasih/{id}
+- Endpoints to CHANGE:
+  - GET /frasih (responses)
+  - GET /frasih/{id} (responses)
+- Endpoints to REMOVE:
+  - POST /frasih
+  - DELETE /frasih/{id}
+  - POST /frasih/{id}
+  - GET /sostanza/findByFrasiH/{key}
+- Schema changes:
+  - Added schemas: FrasiHCreate, FrasiHUpdate
+  - FrasiH: added: codice, descrizione, punteggio; removed: Codice, Descrizione, Punteggio; required+: codice, descrizione, id, punteggio; required-: Codice, Descrizione, Punteggio
+- Auth/RBAC impact:
+  - Admin-only routes present under /admin
+  - Read allowed for authenticated users; CRUD restricted to ADMIN
+- Validation rules to implement:
+  - FrasiH: update validations for required/enum/type changes
+- Database changes/migrations:
+  - FrasiH: adjust columns for codice, descrizione, punteggio, Codice, Descrizione, Punteggio
+  - FrasiHCreate: new table or model mapping
+  - FrasiHUpdate: new table or model mapping
+- Seed/data migration needs:
+  - Seed/update global catalogs to match new schemas
+- Backward-compat strategy:
+  - Removed endpoints: consider temporary aliases or versioned endpoints
+  - FrasiH: removed fields may require backward-compatible responses
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update handlers for changed request/response/security
+  - Remove or deprecate removed endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Codifiche (global)
+- Endpoints to ADD:
+  - GET /admin/codifiche/livelli-contatto-cutaneo
+  - POST /admin/codifiche/livelli-contatto-cutaneo
+  - DELETE /admin/codifiche/livelli-contatto-cutaneo/{id}
+  - GET /admin/codifiche/livelli-contatto-cutaneo/{id}
+  - PATCH /admin/codifiche/livelli-contatto-cutaneo/{id}
+  - GET /admin/codifiche/stato-fisico-inal
+  - POST /admin/codifiche/stato-fisico-inal
+  - DELETE /admin/codifiche/stato-fisico-inal/{id}
+  - GET /admin/codifiche/stato-fisico-inal/{id}
+  - PATCH /admin/codifiche/stato-fisico-inal/{id}
+  - GET /admin/codifiche/tipo-controllo-inal
+  - POST /admin/codifiche/tipo-controllo-inal
+  - DELETE /admin/codifiche/tipo-controllo-inal/{id}
+  - GET /admin/codifiche/tipo-controllo-inal/{id}
+  - PATCH /admin/codifiche/tipo-controllo-inal/{id}
+  - GET /admin/codifiche/tipo-controllo-proc
+  - POST /admin/codifiche/tipo-controllo-proc
+  - DELETE /admin/codifiche/tipo-controllo-proc/{id}
+  - GET /admin/codifiche/tipo-controllo-proc/{id}
+  - PATCH /admin/codifiche/tipo-controllo-proc/{id}
+  - GET /admin/codifiche/tipo-uso-inal
+  - POST /admin/codifiche/tipo-uso-inal
+  - DELETE /admin/codifiche/tipo-uso-inal/{id}
+  - GET /admin/codifiche/tipo-uso-inal/{id}
+  - PATCH /admin/codifiche/tipo-uso-inal/{id}
+  - GET /codifiche/livelli-contatto-cutaneo
+  - GET /codifiche/livelli-contatto-cutaneo/{id}
+  - GET /codifiche/stato-fisico-inal
+  - GET /codifiche/stato-fisico-inal/{id}
+  - GET /codifiche/tipo-controllo-inal
+  - GET /codifiche/tipo-controllo-inal/{id}
+  - GET /codifiche/tipo-controllo-proc
+  - GET /codifiche/tipo-controllo-proc/{id}
+  - GET /codifiche/tipo-uso-inal
+  - GET /codifiche/tipo-uso-inal/{id}
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - Added schemas: Codifica, CodificaCreate, CodificaTipo, CodificaUpdate
+- Auth/RBAC impact:
+  - Admin-only routes present under /admin
+  - Read allowed for authenticated users; CRUD restricted to ADMIN
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - Codifica: new table or model mapping
+  - CodificaCreate: new table or model mapping
+  - CodificaTipo: new table or model mapping
+  - CodificaUpdate: new table or model mapping
+- Seed/data migration needs:
+  - Seed/update global catalogs to match new schemas
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Aziende (owned)
+- Endpoints to ADD:
+  - GET /aziende
+  - POST /aziende
+  - GET /aziende/{aziendaId}/aree
+  - POST /aziende/{aziendaId}/aree
+  - DELETE /aziende/{id}
+  - GET /aziende/{id}
+  - PATCH /aziende/{id}
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - Added schemas: Azienda, AziendaCreate, AziendaUpdate
+- Auth/RBAC impact:
+  - Ownership enforced via JWT; cross-tenant access returns 404
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - Azienda: new table or model mapping
+  - AziendaCreate: new table or model mapping
+  - AziendaUpdate: new table or model mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Aree (owned, nested)
+- Endpoints to ADD:
+  - GET /aree/{areaId}/lavoratori
+  - POST /aree/{areaId}/lavoratori
+  - DELETE /aree/{id}
+  - GET /aree/{id}
+  - PATCH /aree/{id}
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - Added schemas: Area, AreaCreate, AreaUpdate
+- Auth/RBAC impact:
+  - Ownership enforced via JWT; cross-tenant access returns 404
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - Area: new table or model mapping
+  - AreaCreate: new table or model mapping
+  - AreaUpdate: new table or model mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Lavoratori (owned, nested)
+- Endpoints to ADD:
+  - DELETE /lavoratori/{id}
+  - GET /lavoratori/{id}
+  - PATCH /lavoratori/{id}
+  - GET /lavoratori/{lavoratoreId}/valutazioni
+  - POST /lavoratori/{lavoratoreId}/valutazioni
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - Added schemas: Lavoratore, LavoratoreCreate, LavoratoreUpdate
+- Auth/RBAC impact:
+  - Ownership enforced via JWT; cross-tenant access returns 404
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - Lavoratore: new table or model mapping
+  - LavoratoreCreate: new table or model mapping
+  - LavoratoreUpdate: new table or model mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### AgentiChimici (owned, discriminated by tipo)
+- Endpoints to ADD:
+  - None
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - None
+- Auth/RBAC impact:
+  - Ownership enforced via JWT; cross-tenant access returns 404
+- Validation rules to implement:
+  - Enforce tipo-dependent constraints for sostanzeComponentiIds and frasiHIds
+- Database changes/migrations:
+  - None
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Valutazioni (owned, nested + constraints + ids only)
+- Endpoints to ADD:
+  - POST /calcoli/valutazioni
+  - POST /calcoli/valutazioni/{id}
+  - DELETE /valutazioni/{id}
+  - GET /valutazioni/{id}
+  - PATCH /valutazioni/{id}
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - Added schemas: CalcoloValutazioneRequest, CalcoloValutazioneResponse, Valutazione, ValutazioneCreate, ValutazioneUpdate
+- Auth/RBAC impact:
+  - Ownership enforced via JWT; cross-tenant access returns 404
+- Validation rules to implement:
+  - Validate units and nullable fields per TO-BE; enforce processo-only fields
+- Database changes/migrations:
+  - CalcoloValutazioneRequest: new table or model mapping
+  - CalcoloValutazioneResponse: new table or model mapping
+  - Valutazione: new table or model mapping
+  - ValutazioneCreate: new table or model mapping
+  - ValutazioneUpdate: new table or model mapping
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Implement routes/controllers/services for added endpoints
+  - Update DTOs/models and persistence mappings to match schema changes
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+### Calcoli (stateless endpoints only)
+- Endpoints to ADD:
+  - None
+- Endpoints to CHANGE:
+  - None
+- Endpoints to REMOVE:
+  - None
+- Schema changes:
+  - None
+- Auth/RBAC impact:
+  - None
+- Validation rules to implement:
+  - None
+- Database changes/migrations:
+  - None
+- Seed/data migration needs:
+  - None
+- Backward-compat strategy:
+  - None
+- Task checklist:
+  - Add/adjust validation and error mapping
+  - Extend repository/queries for ownership and RBAC
+  - Add/extend unit/integration tests for endpoints
+
+## Test plan
+- API contract smoke tests per entity/module (status codes + schema shape)
+- RBAC tests: ADMIN vs USER access for admin/global endpoints
+- Ownership tests: cross-tenant access returns 404 for owned resources
+- Validation tests: FK existence, enum/type checks, nullable/required, and discriminator rules
+
+## Implementation ordering
+1) Auth/RBAC foundations (JWT, roles, /admin separation) to unblock access control
+2) Global catalogs (FrasiH, Codifiche) with seeding to support owned resources
+3) Owned CRUD (Aziende, Aree, Lavoratori, AgentiChimici, Valutazioni) with ownership guards
+4) Calcoli endpoints last since they depend on validated CRUD data

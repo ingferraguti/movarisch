@@ -80,6 +80,7 @@ require 'security/ManageUser.php';
 	//db movarisch_db
 		require('./resource/movarisch_db/custom/FrasiHCustom.php');
 		require('./resource/movarisch_db/custom/AgentiChimiciCustom.php');
+		require('./resource/movarisch_db/custom/CalcoliCustom.php');
 		require('./resource/movarisch_db/FrasiH.php');
 		require('./resource/movarisch_db/custom/SostanzaCustom.php');
 		require('./resource/movarisch_db/Sostanza.php');
